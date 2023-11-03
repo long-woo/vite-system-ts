@@ -1,8 +1,9 @@
 import { rollup } from "@rollup/browser";
 
-const _global = (typeof self !== "undefined" ? self : global) as any;
+const { System } = require('systemjs');
+// const  _global = (typeof self !== "undefined" ? self : global) as any;
 
-const systemJSPrototype = _global.System.constructor.prototype;
+const systemJSPrototype = System.constructor.prototype;
 const jsonCssWasmContentType =
   /^(application\/json|application\/wasm|text\/css)(;|$)/;
 const registerRegEx =
@@ -13,38 +14,58 @@ systemJSPrototype.shouldFetch = function () {
 };
 
 systemJSPrototype.fetch = async (url: string, options: RequestInit) => {
-  const _cache = await caches.open('SYSTEM_BABEL_CACHE');
-  // 从缓存中检索数据
-  const _cacheResponse = await _cache.match(url);
+  // const _cache = await caches.open('SYSTEM_BABEL_CACHE');
+  // // 从缓存中检索数据
+  // const _cacheResponse = await _cache.match(url);
   
-  if (_cacheResponse) {
-    // 命中缓存，使用缓存数据
-    return _cacheResponse;
-  }
+  // if (_cacheResponse) {
+  //   // 命中缓存，使用缓存数据
+  //   return _cacheResponse;
+  // }
 
-  const _res = await fetch(url, options);
+  const _bundle = await rollup({
+    input: url,
+    plugins: [{
+      name: 'url-resolver',
+      resolveId(source, importer) {
+        if (source[0] !== '.') {
+          try {
+            new URL(source);
+            // If it is a valid URL, return it
+            return source;
+          } catch {
+            // Otherwise make it external
+            return { id: source, external: true };
+          }
+        }
+        return new URL(source, importer).href;
+      },
+      async load(id) {
+        const _response = await fetch(id);
 
-  if (!_res.ok || jsonCssWasmContentType.test(_res.headers.get('content-type'))) return _res;
-
-  const _text = await _res.text();
-  if (registerRegEx.test(_text)) return new Response(new Blob([_text], { type: 'application/javascript' }));
-
-  const _transform = await babel.transformAsync(_text, {
-    filename: url,
-    sourceMaps: 'inline',
-    ast: false,
-    compact: false,
-    sourceType: 'module',
-    parserOpts: {
-      plugins: stage3Syntax,
-      errorRecovery: true
-    },
-    plugins: jtsxUrls.test(url) ? tsxUrls.test(url) ? tsxPlugins : jsxUrls.test(url) ? jsxPlugins : tsPlugins : plugins
+        return _response.text();
+      },
+    }]
   });
-  const _code = _transform.code + '\n//# sourceURL=' + url + '!system';
-  const _response = new Response(new Blob([_code], { type: 'application/javascript' }));
 
-  // 将处理后的结果存储到缓存中
-  await _cache.put(url, _response.clone());
-  return _response;
+  const { output } = await _bundle.generate({format: 'systemjs', sourcemap: 'inline'});
+  console.log(output);
+
+  // const _res = await fetch(url, options);
+
+  // if (!_res.ok || jsonCssWasmContentType.test(_res.headers.get('content-type'))) return _res;
+
+  // const _text = await _res.text();
+  // if (registerRegEx.test(_text)) return new Response(new Blob([_text], { type: 'application/javascript' }));
+
+  // const _transform = await rollup({
+  //   input: url
+  // });
+  // (await _transform.generate({})).output
+  // const _code = _transform.code + '\n//# sourceURL=' + url + '!system';
+  // const _response = new Response(new Blob([_code], { type: 'application/javascript' }));
+
+  // // 将处理后的结果存储到缓存中
+  // await _cache.put(url, _response.clone());
+  return '';
 }
