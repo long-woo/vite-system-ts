@@ -4,7 +4,8 @@ import { importAsGlobals } from '../esbuild-plugin/ImportAsGlobals'
 const result = await esbuild.build({
   entryPoints: ['src/index.ts'],
   bundle: true,
-  outdir: 'dist',
+  // outdir: 'dist',
+  outfile: './dist/vite-system-ts.js',
   format: 'iife',
   target: 'es2015',
   packages: 'external',

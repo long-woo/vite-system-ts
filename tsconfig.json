@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "lib": ["DOM", "ES2015", "ESNext"],
-    "module": "esnext",
+    "lib": ["DOM", "DOM.Iterable", "ES2015", "ESNext"],
+    "module": "ESNext",
     "target": "ES5",
     "moduleResolution": "bundler",
     "moduleDetection": "force",
@@ -18,5 +18,8 @@
     "types": [
       "bun-types" // add Bun global
     ]
-  }
+  },
+  "include": ["./src/**/*.ts"],
+  "exclude": ["./dist/**/*.js"],
+  "files": ["env.d.ts"]
 }

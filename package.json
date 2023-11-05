@@ -3,7 +3,7 @@
   "module": "src/index.ts",
   "type": "module",
   "scripts": {
-    "build": "bun build ./src/index.ts --outdir ./dist --target browser --format esm --minify --external '*'",
+    "build": "bun build ./src/index.ts --outfile ./dist/vite-system-ts.js --target browser --format esm --minify --external '*'",
     "build:esbuild": "bun ./scripts/build.js",
     "format": "bunx @biomejs/biome format --write ./src",
     "lint": "bunx @biomejs/biome lint ./src",

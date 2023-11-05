@@ -1,7 +1,5 @@
 import { rollup } from "@rollup/browser";
-
-const { System } = require('systemjs');
-// const  _global = (typeof self !== "undefined" ? self : global) as any;
+const System = require('systemjs');
 
 const systemJSPrototype = System.constructor.prototype;
 const jsonCssWasmContentType =
@@ -9,19 +7,48 @@ const jsonCssWasmContentType =
 const registerRegEx =
   /System\s*\.\s*register\s*\(\s*(\[[^\]]*\])\s*,\s*\(?function\s*\(\s*([^\\),\s]+\s*(,\s*([^\\),\s]+)\s*)?\s*)?\)/;
 
+const loadRollup = () => {
+  const _rollupUrl = 'https://unpkg.com/@rollup/browser/dist/rollup.browser.js';
+  // 预加载 rollup wasm 文件
+  const _preloadRollupWasmFile = fetch('https://unpkg.com/@rollup/browser/dist/bindings_wasm_bg.wasm').catch(() => {});
+
+  return new Promise((resolve, reject) => {
+    const _script = document.createElement('script');
+
+    _script.src = _rollupUrl;
+		_script.addEventListener('load', async () => {
+			_preloadRollupWasmFile && (await _preloadRollupWasmFile);
+			resolve(rollup);
+		});
+		_script.addEventListener('error', () => {
+			reject(
+				new Error(`Failed to load ${_rollupUrl}`)
+			);
+		});
+		document.querySelector('head')?.append(_script);
+  })
+}
+
 systemJSPrototype.shouldFetch = function () {
-  return true;
+  return true
 };
 
 systemJSPrototype.fetch = async (url: string, options: RequestInit) => {
-  // const _cache = await caches.open('SYSTEM_BABEL_CACHE');
-  // // 从缓存中检索数据
-  // const _cacheResponse = await _cache.match(url);
+  const _cache = await caches.open('SYSTEM_BABEL_CACHE');
+  // 从缓存中检索数据
+  const _cacheResponse = await _cache.match(url);
   
-  // if (_cacheResponse) {
-  //   // 命中缓存，使用缓存数据
-  //   return _cacheResponse;
-  // }
+  if (_cacheResponse) {
+    // 命中缓存，使用缓存数据
+    return _cacheResponse;
+  }
+
+  const _res = await fetch(url, options);
+
+  if (!_res.ok || jsonCssWasmContentType.test(_res.headers.get('content-type') ?? '')) return _res;
+
+  const _text = await _res.text();
+  if (registerRegEx.test(_text)) return new Response(new Blob([_text], { type: 'application/javascript' }));
 
   const _bundle = await rollup({
     input: url,
@@ -41,31 +68,16 @@ systemJSPrototype.fetch = async (url: string, options: RequestInit) => {
         return new URL(source, importer).href;
       },
       async load(id) {
-        const _response = await fetch(id);
-
-        return _response.text();
+        return _text;
       },
     }]
   });
 
   const { output } = await _bundle.generate({format: 'systemjs', sourcemap: 'inline'});
-  console.log(output);
-
-  // const _res = await fetch(url, options);
-
-  // if (!_res.ok || jsonCssWasmContentType.test(_res.headers.get('content-type'))) return _res;
-
-  // const _text = await _res.text();
-  // if (registerRegEx.test(_text)) return new Response(new Blob([_text], { type: 'application/javascript' }));
-
-  // const _transform = await rollup({
-  //   input: url
-  // });
-  // (await _transform.generate({})).output
-  // const _code = _transform.code + '\n//# sourceURL=' + url + '!system';
-  // const _response = new Response(new Blob([_code], { type: 'application/javascript' }));
+  const _code = output[0].code;
+  const _response = new Response(new Blob([_code], { type: 'application/javascript' }));
 
   // // 将处理后的结果存储到缓存中
-  // await _cache.put(url, _response.clone());
-  return '';
+  await _cache.put(url, _response.clone());
+  return _response;
 }
