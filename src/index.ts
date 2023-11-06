@@ -29,6 +29,12 @@ const loadRollup = () => {
   })
 }
 
+if (import.meta.hot) {
+  import.meta.hot.on('vite:hot-module-replace', (data: string) => {
+    console.log(data)
+  })
+}
+
 systemJSPrototype.shouldFetch = function () {
   return true
 };
@@ -52,6 +58,9 @@ systemJSPrototype.fetch = async (url: string, options: RequestInit) => {
 
   const _bundle = await rollup({
     input: url,
+    treeshake: {
+      annotations: false
+    },
     plugins: [{
       name: 'url-resolver',
       resolveId(source, importer) {

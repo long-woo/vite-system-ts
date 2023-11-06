@@ -12,7 +12,10 @@ const result = await esbuild.build({
   plugins: [importAsGlobals({
     '@rollup/browser': 'rollup',
     systemjs: 'System'
-  })]
+  })],
+  logOverride: {
+    'empty-import-meta': 'verbose'
+  }
 });
 
 if (result.errors.length) {
