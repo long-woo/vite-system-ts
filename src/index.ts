@@ -29,12 +29,6 @@ const loadRollup = () => {
   })
 }
 
-if (import.meta.hot) {
-  import.meta.hot.on('vps:hot-module-replace', (data: string) => {
-    console.log(data)
-  })
-}
-
 systemJSPrototype.shouldFetch = function () {
   return true
 };
