@@ -30,7 +30,7 @@ const loadRollup = () => {
 }
 
 if (import.meta.hot) {
-  import.meta.hot.on('vite:hot-module-replace', (data: string) => {
+  import.meta.hot.on('vps:hot-module-replace', (data: string) => {
     console.log(data)
   })
 }
@@ -76,7 +76,7 @@ systemJSPrototype.fetch = async (url: string, options: RequestInit) => {
         }
         return new URL(source, importer).href;
       },
-      async load(id) {
+      load(id) {
         return _text;
       },
     }]
@@ -86,7 +86,7 @@ systemJSPrototype.fetch = async (url: string, options: RequestInit) => {
   const _code = output[0].code;
   const _response = new Response(new Blob([_code], { type: 'application/javascript' }));
 
-  // // 将处理后的结果存储到缓存中
+  // 将处理后的结果存储到缓存中
   await _cache.put(url, _response.clone());
   return _response;
 }
