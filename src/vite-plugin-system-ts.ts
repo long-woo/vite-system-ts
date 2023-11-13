@@ -29,7 +29,7 @@ export const ViteSystemTS = (option: ViteSystemTSOption): Plugin => {
 				code: `${code}
 				
 				if (import.meta.hot) {
-					import.meta.hot.on('vps:hot-file-update', (data: string) => {
+					import.meta.hot.on('vps:hot-file-update', (data) => {
 						console.log(data)
 					})
 				}`

@@ -1,5 +1,7 @@
-import { rollup } from "@rollup/browser";
+import { rollup, type RollupCache } from "@rollup/browser";
+
 const System = require('systemjs');
+// let buildCache: RollupCache | undefined = undefined;
 
 const systemJSPrototype = System.constructor.prototype;
 const jsonCssWasmContentType =
@@ -29,32 +31,10 @@ const loadRollup = () => {
   })
 }
 
-systemJSPrototype.shouldFetch = function () {
-  return true
-};
-
-systemJSPrototype.fetch = async (url: string, options: RequestInit) => {
-  const _cache = await caches.open('SYSTEM_BABEL_CACHE');
-  // 从缓存中检索数据
-  const _cacheResponse = await _cache.match(url);
-  
-  if (_cacheResponse) {
-    // 命中缓存，使用缓存数据
-    return _cacheResponse;
-  }
-
-  const _res = await fetch(url, options);
-
-  if (!_res.ok || jsonCssWasmContentType.test(_res.headers.get('content-type') ?? '')) return _res;
-
-  const _text = await _res.text();
-  if (registerRegEx.test(_text)) return new Response(new Blob([_text], { type: 'application/javascript' }));
-
+const buildWithRollup = async (url: string, code: string) => {
   const _bundle = await rollup({
     input: url,
-    treeshake: {
-      annotations: false
-    },
+    // cache: buildCache,
     plugins: [{
       name: 'url-resolver',
       resolveId(source, importer) {
@@ -71,16 +51,41 @@ systemJSPrototype.fetch = async (url: string, options: RequestInit) => {
         return new URL(source, importer).href;
       },
       load(id) {
-        return _text;
+        return code;
       },
     }]
   });
 
+  // buildCache = _bundle.cache;
   const { output } = await _bundle.generate({format: 'systemjs', sourcemap: 'inline'});
-  const _code = output[0].code;
-  const _response = new Response(new Blob([_code], { type: 'application/javascript' }));
+  return output[0];
+}
+
+systemJSPrototype.shouldFetch = function () {
+  return true
+};
+
+systemJSPrototype.fetch = async (url: string, options: RequestInit) => {
+  // const _cache = await caches.open('SYSTEM_BABEL_CACHE');
+  // // 从缓存中检索数据
+  // const _cacheResponse = await _cache.match(url);
+  
+  // if (_cacheResponse) {
+  //   // 命中缓存，使用缓存数据
+  //   return _cacheResponse;
+  // }
+
+  const _res = await fetch(url, options);
+
+  if (!_res.ok || jsonCssWasmContentType.test(_res.headers.get('content-type') ?? '')) return _res;
+
+  const _text = await _res.text();
+  if (registerRegEx.test(_text)) return new Response(new Blob([_text], { type: 'application/javascript' }));
+
+  const { code } = await buildWithRollup(url, _text);
+  const _response = new Response(new Blob([code], { type: 'application/javascript' }));
 
   // 将处理后的结果存储到缓存中
-  await _cache.put(url, _response.clone());
+  // await _cache.put(url, _response.clone());
   return _response;
 }
