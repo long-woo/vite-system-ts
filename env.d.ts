@@ -9,6 +9,6 @@ declare module 'vite/types/customEvent' {
 
 declare interface Window {
 	__VPS_HMR: {
-		emit: (files: string[]) => void
+		emit: (file: string) => void
 	}
 }

@@ -15,12 +15,20 @@ export const ViteSystemTS = (option: ViteSystemTSOption): Plugin => {
 		name: 'vite-system-ts',
 		apply: 'serve',
 		handleHotUpdate({server, file}) {
+			// const _files = modules.map(_module => {
+			// 	const _url = _module.url.slice(1);
+
+			// 	return `${server.resolvedUrls?.local}${_url}`;
+			// });
+			// console.log(_files);
+			const _file = file.replace(/.*\/(apps|packages)/, '');
+
 			server.ws.send({
 				type: 'custom',
 				event: 'vps:hot-file-update',
-				data: [file]
-			})
-			return []
+				data: _file
+			});
+			return [];
 		},
 		transform(code, id) {
 			if (_hotEnter === 'main' && !/main.(j|t)s$/.test(_hotEnter) || !id.includes(_hotEnter)) return code
@@ -29,8 +37,8 @@ export const ViteSystemTS = (option: ViteSystemTSOption): Plugin => {
 				code: `${code}
 				
 				if (import.meta.hot) {
-					import.meta.hot.on('vps:hot-file-update', (files) => {
-						window.__VPS_HMR.emit(files)
+					import.meta.hot.on('vps:hot-file-update', (_file) => {
+						window.__VPS_HMR.emit(_file)
 					})
 				}`
 			}

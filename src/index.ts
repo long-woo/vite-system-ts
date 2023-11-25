@@ -82,7 +82,7 @@ const buildWithRollup = async (url: string, code: string) => {
  * @return {Promise<Response>} A promise that resolves to the fetched code response.
  */
 const loadCode = async (url: string, options: RequestInit) => {
-  // const _cache = await caches.open('SYSTEM_BABEL_CACHE');
+  // const _cache = await caches.open('VITE_SYSTEM_TS_CACHE');
   // // 从缓存中检索数据
   // const _cacheResponse = await _cache.match(url);
   
@@ -102,7 +102,7 @@ const loadCode = async (url: string, options: RequestInit) => {
   const _response = new Response(new Blob([code], { type: 'application/javascript' }));
 
   // 将处理后的结果存储到缓存中
-  // await _cache.put(url, _response.clone());
+  // await _cache.put(url.replace(/.*\/(apps|packages)/, ''), _response.clone());
   return _response;
 }
 
@@ -112,21 +112,30 @@ const loadCode = async (url: string, options: RequestInit) => {
  * @return {Object} An object with the `emit` function.
  */
 const initHMREvent = () => {
-  const _customEvent = new CustomEvent<{files: string[]}>('vps:hot-file-update', {
+  const _customEvent = new CustomEvent<{file: string}>('vps:hot-file-update', {
     detail: {
-      files: []
+      file: '',
     }
   });
 
-  const emit = (files: string[]) => {
-    _customEvent.detail.files = files;
+  const emit = (file: string) => {
+    _customEvent.detail.file = file;
 
     window.dispatchEvent(_customEvent);
   }
 
   window.addEventListener('vps:hot-file-update', (event) => {
-    const { files } = (event as CustomEvent<{files: string[]}>).detail;
-    console.log(files);
+    const { file } = (event as CustomEvent<{file: string}>).detail;
+    console.log(file);
+    // .
+    for (const [id] of System.entries()) {
+      if (id.includes(file)) {
+        System.delete(id);
+        System.import(id);
+        // systemJSPrototype.fetch(id)
+        break
+      }
+    }
   });
 
   return { emit }
