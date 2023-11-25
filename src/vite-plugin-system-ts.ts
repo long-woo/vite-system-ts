@@ -18,7 +18,7 @@ export const ViteSystemTS = (option: ViteSystemTSOption): Plugin => {
 			server.ws.send({
 				type: 'custom',
 				event: 'vps:hot-file-update',
-				data: file
+				data: [file]
 			})
 			return []
 		},
@@ -29,8 +29,8 @@ export const ViteSystemTS = (option: ViteSystemTSOption): Plugin => {
 				code: `${code}
 				
 				if (import.meta.hot) {
-					import.meta.hot.on('vps:hot-file-update', (data) => {
-						console.log(data)
+					import.meta.hot.on('vps:hot-file-update', (files) => {
+						window.__VPS_HMR.emit(files)
 					})
 				}`
 			}

@@ -9,10 +9,16 @@ const jsonCssWasmContentType =
 const registerRegEx =
   /System\s*\.\s*register\s*\(\s*(\[[^\]]*\])\s*,\s*\(?function\s*\(\s*([^\\),\s]+\s*(,\s*([^\\),\s]+)\s*)?\s*)?\)/;
 
-const loadRollup = () => {
-  const _rollupUrl = 'https://unpkg.com/@rollup/browser/dist/rollup.browser.js';
+/**
+ * Load the Rollup library from the specified URL.
+ *
+ * @param {string} url - The URL from which to load the Rollup library. Default is 'https://unpkg.com/@rollup/browser/dist'.
+ * @return {Promise} A promise that resolves with the loaded Rollup library.
+ */
+const loadRollup = (url = 'https://unpkg.com/@rollup/browser/dist') => {
+  const _rollupUrl = '/rollup.browser.js';
   // 预加载 rollup wasm 文件
-  const _preloadRollupWasmFile = fetch('https://unpkg.com/@rollup/browser/dist/bindings_wasm_bg.wasm').catch(() => {});
+  const _preloadRollupWasmFile = fetch('/bindings_wasm_bg.wasm').catch(() => {});
 
   return new Promise((resolve, reject) => {
     const _script = document.createElement('script');
@@ -31,6 +37,13 @@ const loadRollup = () => {
   })
 }
 
+/**
+ * Builds the code using Rollup.
+ *
+ * @param {string} url - The URL of the input file.
+ * @param {string} code - The code to be bundled.
+ * @return {Promise<OutputChunk>} The bundled code.
+ */
 const buildWithRollup = async (url: string, code: string) => {
   const _bundle = await rollup({
     input: url,
@@ -61,11 +74,14 @@ const buildWithRollup = async (url: string, code: string) => {
   return output[0];
 }
 
-systemJSPrototype.shouldFetch = function () {
-  return true
-};
-
-systemJSPrototype.fetch = async (url: string, options: RequestInit) => {
+/**
+ * Loads code from a specified URL with provided options.
+ *
+ * @param {string} url - The URL from which to load the code.
+ * @param {RequestInit} options - The options to use when fetching the code.
+ * @return {Promise<Response>} A promise that resolves to the fetched code response.
+ */
+const loadCode = async (url: string, options: RequestInit) => {
   // const _cache = await caches.open('SYSTEM_BABEL_CACHE');
   // // 从缓存中检索数据
   // const _cacheResponse = await _cache.match(url);
@@ -89,3 +105,37 @@ systemJSPrototype.fetch = async (url: string, options: RequestInit) => {
   // await _cache.put(url, _response.clone());
   return _response;
 }
+
+/**
+ * Initializes the HMR (Hot Module Replacement) event.
+ *
+ * @return {Object} An object with the `emit` function.
+ */
+const initHMREvent = () => {
+  const _customEvent = new CustomEvent<{files: string[]}>('vps:hot-file-update', {
+    detail: {
+      files: []
+    }
+  });
+
+  const emit = (files: string[]) => {
+    _customEvent.detail.files = files;
+
+    window.dispatchEvent(_customEvent);
+  }
+
+  window.addEventListener('vps:hot-file-update', (event) => {
+    const { files } = (event as CustomEvent<{files: string[]}>).detail;
+    console.log(files);
+  });
+
+  return { emit }
+}
+
+window.__VPS_HMR = initHMREvent();
+
+systemJSPrototype.shouldFetch = function () {
+  return true
+};
+
+systemJSPrototype.fetch = loadCode;
