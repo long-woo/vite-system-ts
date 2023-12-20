@@ -2,7 +2,7 @@
   "compilerOptions": {
     "lib": ["DOM", "DOM.Iterable", "ES2015", "ESNext"],
     "module": "ESNext",
-    "target": "ES5",
+    "target": "ESNext",
     "moduleResolution": "bundler",
     "moduleDetection": "force",
     "allowImportingTsExtensions": true,

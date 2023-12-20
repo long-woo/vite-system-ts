@@ -1,13 +1,15 @@
-import { rollup, type RollupCache } from "@rollup/browser";
+import { type RollupCache, rollup } from "@rollup/browser";
 
-const System = require('systemjs');
+const System = require("systemjs");
 // let buildCache: RollupCache | undefined = undefined;
 
 const systemJSPrototype = System.constructor.prototype;
 const jsonCssWasmContentType =
-  /^(application\/json|application\/wasm|text\/css)(;|$)/;
+	/^(application\/json|application\/wasm|text\/css)(;|$)/;
 const registerRegEx =
-  /System\s*\.\s*register\s*\(\s*(\[[^\]]*\])\s*,\s*\(?function\s*\(\s*([^\\),\s]+\s*(,\s*([^\\),\s]+)\s*)?\s*)?\)/;
+	/System\s*\.\s*register\s*\(\s*(\[[^\]]*\])\s*,\s*\(?function\s*\(\s*([^\\),\s]+\s*(,\s*([^\\),\s]+)\s*)?\s*)?\)/;
+
+const _VPS_CACHE = await caches.open("VITE_SYSTEM_TS_CACHE");
 
 /**
  * Load the Rollup library from the specified URL.
@@ -15,27 +17,27 @@ const registerRegEx =
  * @param {string} url - The URL from which to load the Rollup library. Default is 'https://unpkg.com/@rollup/browser/dist'.
  * @return {Promise} A promise that resolves with the loaded Rollup library.
  */
-const loadRollup = (url = 'https://unpkg.com/@rollup/browser/dist') => {
-  const _rollupUrl = '/rollup.browser.js';
-  // 预加载 rollup wasm 文件
-  const _preloadRollupWasmFile = fetch('/bindings_wasm_bg.wasm').catch(() => {});
+const loadRollup = (url = "https://unpkg.com/@rollup/browser/dist") => {
+	const _rollupUrl = "/rollup.browser.js";
+	// 预加载 rollup wasm 文件
+	const _preloadRollupWasmFile = fetch("/bindings_wasm_bg.wasm").catch(
+		() => {},
+	);
 
-  return new Promise((resolve, reject) => {
-    const _script = document.createElement('script');
+	return new Promise((resolve, reject) => {
+		const _script = document.createElement("script");
 
-    _script.src = _rollupUrl;
-		_script.addEventListener('load', async () => {
+		_script.src = _rollupUrl;
+		_script.addEventListener("load", async () => {
 			_preloadRollupWasmFile && (await _preloadRollupWasmFile);
 			resolve(rollup);
 		});
-		_script.addEventListener('error', () => {
-			reject(
-				new Error(`Failed to load ${_rollupUrl}`)
-			);
+		_script.addEventListener("error", () => {
+			reject(new Error(`Failed to load ${_rollupUrl}`));
 		});
-		document.querySelector('head')?.append(_script);
-  })
-}
+		document.querySelector("head")?.append(_script);
+	});
+};
 
 /**
  * Builds the code using Rollup.
@@ -45,33 +47,56 @@ const loadRollup = (url = 'https://unpkg.com/@rollup/browser/dist') => {
  * @return {Promise<OutputChunk>} The bundled code.
  */
 const buildWithRollup = async (url: string, code: string) => {
-  const _bundle = await rollup({
-    input: url,
-    // cache: buildCache,
-    plugins: [{
-      name: 'url-resolver',
-      resolveId(source, importer) {
-        if (source[0] !== '.') {
-          try {
-            new URL(source);
-            // If it is a valid URL, return it
-            return source;
-          } catch {
-            // Otherwise make it external
-            return { id: source, external: true };
-          }
-        }
-        return new URL(source, importer).href;
-      },
-      load(id) {
-        return code;
-      },
-    }]
-  });
+	const _bundle = await rollup({
+		input: url,
+		// cache: buildCache,
+		plugins: [
+			{
+				name: "url-resolver",
+				resolveId(source, importer) {
+					if (source[0] !== ".") {
+						try {
+							new URL(source);
+							// If it is a valid URL, return it
+							return source;
+						} catch {
+							// Otherwise make it external
+							return { id: source, external: true };
+						}
+					}
+					return new URL(source, importer).href;
+				},
+				load(id) {
+					return code;
+				},
+			},
+		],
+	});
 
-  // buildCache = _bundle.cache;
-  const { output } = await _bundle.generate({format: 'systemjs', sourcemap: 'inline'});
-  return output[0];
+	// buildCache = _bundle.cache;
+	const { output } = await _bundle.generate({
+		format: "systemjs",
+		sourcemap: "inline",
+	});
+	return output[0];
+};
+
+/**
+ * Retrieves the transformed code by building with Rollup.
+ *
+ * @param {string} url - The URL to fetch the code from.
+ * @param {string} code - The original code to transform.
+ * @return {Promise<Response>} A promise that resolves to the transformed code as a response.
+ */
+const getTransformCode = async (url: string, code: string) => {
+	const { code: _code } = await buildWithRollup(url, code);
+	const _response = new Response(
+		new Blob([_code], { type: "application/javascript" }),
+	);
+
+	// 将处理后的结果存储到缓存中
+	await _VPS_CACHE.put(url.replace(/.*\/(apps|packages)/, ''), _response.clone());
+	return _response;
 }
 
 /**
@@ -82,29 +107,29 @@ const buildWithRollup = async (url: string, code: string) => {
  * @return {Promise<Response>} A promise that resolves to the fetched code response.
  */
 const loadCode = async (url: string, options: RequestInit) => {
-  // const _cache = await caches.open('VITE_SYSTEM_TS_CACHE');
-  // // 从缓存中检索数据
-  // const _cacheResponse = await _cache.match(url);
-  
-  // if (_cacheResponse) {
-  //   // 命中缓存，使用缓存数据
-  //   return _cacheResponse;
-  // }
+	// 从缓存中检索数据
+	const _cacheResponse = await _VPS_CACHE.match(url);
 
-  const _res = await fetch(url, options);
+	if (_cacheResponse) {
+	  // 命中缓存，使用缓存数据
+	  return _cacheResponse;
+	}
 
-  if (!_res.ok || jsonCssWasmContentType.test(_res.headers.get('content-type') ?? '')) return _res;
+	const _res = await fetch(url, options);
 
-  const _text = await _res.text();
-  if (registerRegEx.test(_text)) return new Response(new Blob([_text], { type: 'application/javascript' }));
+	if (
+		!_res.ok ||
+		jsonCssWasmContentType.test(_res.headers.get("content-type") ?? "")
+	)
+		return _res;
 
-  const { code } = await buildWithRollup(url, _text);
-  const _response = new Response(new Blob([code], { type: 'application/javascript' }));
+	const _text = await _res.text();
+	if (registerRegEx.test(_text))
+		return new Response(new Blob([_text], { type: "application/javascript" }));
 
-  // 将处理后的结果存储到缓存中
-  // await _cache.put(url.replace(/.*\/(apps|packages)/, ''), _response.clone());
-  return _response;
-}
+	const _code = await getTransformCode(url, _text);
+	return _code;
+};
 
 /**
  * Initializes the HMR (Hot Module Replacement) event.
@@ -112,39 +137,44 @@ const loadCode = async (url: string, options: RequestInit) => {
  * @return {Object} An object with the `emit` function.
  */
 const initHMREvent = () => {
-  const _customEvent = new CustomEvent<{file: string}>('vps:hot-file-update', {
-    detail: {
-      file: '',
-    }
-  });
+	const _customEvent = new CustomEvent<VPSEmitData>(
+		"vps:hot-file-update",
+		{
+			detail: undefined,
+		},
+	);
 
-  const emit = (file: string) => {
-    _customEvent.detail.file = file;
+	const emit = (data: VPSEmitData) => {
+		_customEvent.detail.file = data.file;
+		_customEvent.detail.code = data.code;
 
-    window.dispatchEvent(_customEvent);
-  }
+		window.dispatchEvent(_customEvent);
+	};
 
-  window.addEventListener('vps:hot-file-update', (event) => {
-    const { file } = (event as CustomEvent<{file: string}>).detail;
-    console.log(file);
-    // .
-    for (const [id] of System.entries()) {
-      if (id.includes(file)) {
-        System.delete(id);
-        System.import(id);
-        // systemJSPrototype.fetch(id)
-        break
-      }
-    }
-  });
+	window.addEventListener("vps:hot-file-update", async (event) => {
+		const { file, code: sourceCode } = (event as CustomEvent<VPSEmitData>).detail;
 
-  return { emit }
-}
+		for (const [id] of System.entries()) {
+			if (id.includes(file)) {
+				System.delete(id);
+				System.import(id);
+				
+				const { code } = await buildWithRollup(id, sourceCode);
+
+				// 更新缓存中的文件内容
+				_VPS_CACHE.delete(id);
+				await getTransformCode(id, code);
+				// 刷新页面
+				window.location.reload();
+				break;
+			}
+		}
+	});
+
+	return { emit };
+};
 
 window.__VPS_HMR = initHMREvent();
 
-systemJSPrototype.shouldFetch = function () {
-  return true
-};
-
+systemJSPrototype.shouldFetch = () => true;
 systemJSPrototype.fetch = loadCode;
