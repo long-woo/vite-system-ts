@@ -9,7 +9,7 @@ const jsonCssWasmContentType =
 const registerRegEx =
 	/System\s*\.\s*register\s*\(\s*(\[[^\]]*\])\s*,\s*\(?function\s*\(\s*([^\\),\s]+\s*(,\s*([^\\),\s]+)\s*)?\s*)?\)/;
 
-const _VPS_CACHE = await caches.open("VITE_SYSTEM_TS_CACHE");
+let _VPS_CACHE: Cache | null = null;
 
 /**
  * Load the Rollup library from the specified URL.
@@ -38,6 +38,12 @@ const loadRollup = (url = "https://unpkg.com/@rollup/browser/dist") => {
 		document.querySelector("head")?.append(_script);
 	});
 };
+
+const openCache = async () => {
+	if (!_VPS_CACHE) {
+		_VPS_CACHE = await caches.open("VITE_SYSTEM_TS_CACHE")
+	}
+}
 
 /**
  * Builds the code using Rollup.
@@ -95,7 +101,7 @@ const getTransformCode = async (url: string, code: string) => {
 	);
 
 	// 将处理后的结果存储到缓存中
-	await _VPS_CACHE.put(url.replace(/.*\/(apps|packages)/, ''), _response.clone());
+	await _VPS_CACHE?.put(url.replace(/.*\/(apps|packages)/, ''), _response.clone());
 	return _response;
 }
 
@@ -108,7 +114,7 @@ const getTransformCode = async (url: string, code: string) => {
  */
 const loadCode = async (url: string, options: RequestInit) => {
 	// 从缓存中检索数据
-	const _cacheResponse = await _VPS_CACHE.match(url);
+	const _cacheResponse = await _VPS_CACHE?.match(url);
 
 	if (_cacheResponse) {
 	  // 命中缓存，使用缓存数据
@@ -140,7 +146,10 @@ const initHMREvent = () => {
 	const _customEvent = new CustomEvent<VPSEmitData>(
 		"vps:hot-file-update",
 		{
-			detail: undefined,
+			detail: {
+				file: '',
+				code: ''
+			},
 		},
 	);
 
@@ -158,12 +167,10 @@ const initHMREvent = () => {
 			if (id.includes(file)) {
 				System.delete(id);
 				System.import(id);
-				
-				const { code } = await buildWithRollup(id, sourceCode);
 
 				// 更新缓存中的文件内容
-				_VPS_CACHE.delete(id);
-				await getTransformCode(id, code);
+				_VPS_CACHE?.delete(id);
+				await getTransformCode(id, sourceCode);
 				// 刷新页面
 				window.location.reload();
 				break;
@@ -174,6 +181,7 @@ const initHMREvent = () => {
 	return { emit };
 };
 
+openCache();
 window.__VPS_HMR = initHMREvent();
 
 systemJSPrototype.shouldFetch = () => true;
