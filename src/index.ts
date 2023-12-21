@@ -158,7 +158,7 @@ const initHMREvent = () => {
 		window.dispatchEvent(_customEvent);
 	};
 
-	window.addEventListener("vps:hot-file-update", async (event) => {
+	window.addEventListener("vps:hot-file-update", (event) => {
 		const { file } = (event as CustomEvent<VPSEmitData>).detail;
 
 		for (const [id] of System.entries()) {
@@ -167,10 +167,10 @@ const initHMREvent = () => {
 				_VPS_CACHE?.delete(id);
 				
 				System.delete(id);
-				System.import(id);
-
-				// 刷新页面
-				window.location.reload();
+				System.import(id).then(() => {
+					// 刷新页面
+					window.location.reload();
+				});
 				break;
 			}
 		}
