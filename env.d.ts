@@ -3,7 +3,6 @@
 
 interface VPSEmitData {
 	file: string;
-	code: string;
 }
 
 declare module 'vite/types/customEvent' {

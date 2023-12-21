@@ -14,7 +14,7 @@ export const ViteSystemTS = (option: ViteSystemTSOption): Plugin => {
 	return {
 		name: "vite-system-ts",
 		apply: "serve",
-		async handleHotUpdate({ server, file, read }) {
+		async handleHotUpdate({ server, file }) {
 			// const _files = modules.map(_module => {
 			// 	const _url = _module.url.slice(1);
 
@@ -22,14 +22,12 @@ export const ViteSystemTS = (option: ViteSystemTSOption): Plugin => {
 			// });
 			// console.log(_files);
 			const _file = file.replace(/.*\/(apps|packages)/, "");
-			const _fileContent = await read();
 
 			server.ws.send({
 				type: "custom",
 				event: "vps:hot-file-update",
 				data: {
-					file: _file,
-					code: _fileContent,
+					file: _file
 				},
 			});
 			return [];

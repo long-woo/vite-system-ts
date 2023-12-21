@@ -147,30 +147,28 @@ const initHMREvent = () => {
 		"vps:hot-file-update",
 		{
 			detail: {
-				file: '',
-				code: ''
+				file: ''
 			},
 		},
 	);
 
 	const emit = (data: VPSEmitData) => {
 		_customEvent.detail.file = data.file;
-		_customEvent.detail.code = data.code;
 
 		window.dispatchEvent(_customEvent);
 	};
 
 	window.addEventListener("vps:hot-file-update", async (event) => {
-		const { file, code: sourceCode } = (event as CustomEvent<VPSEmitData>).detail;
+		const { file } = (event as CustomEvent<VPSEmitData>).detail;
 
 		for (const [id] of System.entries()) {
 			if (id.includes(file)) {
+				// 删除缓存
+				_VPS_CACHE?.delete(id);
+				
 				System.delete(id);
 				System.import(id);
 
-				// 更新缓存中的文件内容
-				_VPS_CACHE?.delete(id);
-				await getTransformCode(id, sourceCode);
 				// 刷新页面
 				window.location.reload();
 				break;
