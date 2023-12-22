@@ -5,6 +5,8 @@ interface VPSEmitData {
 	file: string;
 }
 
+
+
 declare module 'vite/types/customEvent' {
 	interface CustomEventMap {
 		'vps:hot-module-replace': string;

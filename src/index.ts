@@ -41,9 +41,9 @@ const loadRollup = (url = "https://unpkg.com/@rollup/browser/dist") => {
 
 const openCache = async () => {
 	if (!_VPS_CACHE) {
-		_VPS_CACHE = await caches.open("VITE_SYSTEM_TS_CACHE")
+		_VPS_CACHE = await caches.open("VITE_SYSTEM_TS_CACHE");
 	}
-}
+};
 
 /**
  * Builds the code using Rollup.
@@ -101,9 +101,12 @@ const getTransformCode = async (url: string, code: string) => {
 	);
 
 	// 将处理后的结果存储到缓存中
-	await _VPS_CACHE?.put(url.replace(/.*\/(apps|packages)/, ''), _response.clone());
+	await _VPS_CACHE?.put(
+		url.replace(/.*\/(apps|packages)/, ""),
+		_response.clone(),
+	);
 	return _response;
-}
+};
 
 /**
  * Loads code from a specified URL with provided options.
@@ -117,8 +120,8 @@ const loadCode = async (url: string, options: RequestInit) => {
 	const _cacheResponse = await _VPS_CACHE?.match(url);
 
 	if (_cacheResponse) {
-	  // 命中缓存，使用缓存数据
-	  return _cacheResponse;
+		// 命中缓存，使用缓存数据
+		return _cacheResponse;
 	}
 
 	const _res = await fetch(url, options);
@@ -143,14 +146,11 @@ const loadCode = async (url: string, options: RequestInit) => {
  * @return {Object} An object with the `emit` function.
  */
 const initHMREvent = () => {
-	const _customEvent = new CustomEvent<VPSEmitData>(
-		"vps:hot-file-update",
-		{
-			detail: {
-				file: ''
-			},
+	const _customEvent = new CustomEvent<VPSEmitData>("vps:hot-file-update", {
+		detail: {
+			file: "",
 		},
-	);
+	});
 
 	const emit = (data: VPSEmitData) => {
 		_customEvent.detail.file = data.file;
@@ -160,20 +160,21 @@ const initHMREvent = () => {
 
 	window.addEventListener("vps:hot-file-update", (event) => {
 		const { file } = (event as CustomEvent<VPSEmitData>).detail;
+		const _modules = Array.from<Iterable<[string, unknown]>>(
+			System.entries(),
+		).filter(([id]) => id.includes(file));
 
-		for (const [id] of System.entries()) {
-			if (id.includes(file)) {
-				// 删除缓存
-				_VPS_CACHE?.delete(id);
-				
-				System.delete(id);
-				System.import(id).then(() => {
+		_modules.forEach(([id], index) => {
+			// 删除缓存
+			_VPS_CACHE?.delete(id.toString());
+			System.delete(id);
+			System.import(id).then(() => {
+				if (_modules.length - 1 === index) {
 					// 刷新页面
 					window.location.reload();
-				});
-				break;
-			}
-		}
+				}
+			});
+		});
 	});
 
 	return { emit };

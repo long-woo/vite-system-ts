@@ -27,7 +27,7 @@ export const ViteSystemTS = (option: ViteSystemTSOption): Plugin => {
 				type: "custom",
 				event: "vps:hot-file-update",
 				data: {
-					file: _file
+					file: _file,
 				},
 			});
 			return [];
