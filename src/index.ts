@@ -163,18 +163,20 @@ const initHMREvent = () => {
 		const _modules = Array.from<Iterable<[string, unknown]>>(
 			System.entries(),
 		).filter(([id]) => id.includes(file));
+		let _index = 1;
 
-		_modules.forEach(([id], index) => {
+		for (const [id] of _modules) {
+			_index += 1;
 			// 删除缓存
 			_VPS_CACHE?.delete(id.toString());
 			System.delete(id);
 			System.import(id).then(() => {
-				if (_modules.length - 1 === index) {
+				if (_modules.length - 1 === _index) {
 					// 刷新页面
 					window.location.reload();
 				}
 			});
-		});
+		}
 	});
 
 	return { emit };
