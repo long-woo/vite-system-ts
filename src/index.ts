@@ -165,14 +165,20 @@ const initHMREvent = () => {
 		).filter(([id]) => id.includes(file));
 		let _index = 1;
 
+		// 不存在时，直接刷新页面
+		if (!_modules.length) {
+			window.location.reload();
+			return;
+		}
+
 		for (const [id] of _modules) {
 			_index += 1;
 			// 删除缓存
 			_VPS_CACHE?.delete(id.toString());
 			System.delete(id);
 			System.import(id).then(() => {
+				// 全部加载到 system 后，刷新页面
 				if (_modules.length - 1 === _index) {
-					// 刷新页面
 					window.location.reload();
 				}
 			});
