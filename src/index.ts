@@ -158,7 +158,7 @@ const initHMREvent = () => {
 		window.dispatchEvent(_customEvent);
 	};
 
-	window.addEventListener("vps:hot-file-update", (event) => {
+	window.addEventListener("vps:hot-file-update", async (event) => {
 		const { file } = (event as CustomEvent<VPSEmitData>).detail;
 		const _modules = Array.from<Iterable<[string, unknown]>>(
 			System.entries(),
@@ -172,16 +172,17 @@ const initHMREvent = () => {
 		}
 
 		for (const [id] of _modules) {
-			_index += 1;
 			// 删除缓存
 			_VPS_CACHE?.delete(id.toString());
 			System.delete(id);
-			System.import(id).then(() => {
-				// 全部加载到 system 后，刷新页面
-				if (_modules.length === _index) {
-					window.location.reload();
-				}
-			});
+			await System.import(id);
+			
+			// 全部加载到 system 后，刷新页面
+			if (_modules.length === _index) {
+				window.location.reload();
+			}
+			
+			_index += 1;
 		}
 	});
 
