@@ -178,7 +178,7 @@ const initHMREvent = () => {
 			System.delete(id);
 			System.import(id).then(() => {
 				// 全部加载到 system 后，刷新页面
-				if (_modules.length - 1 === _index) {
+				if (_modules.length === _index) {
 					window.location.reload();
 				}
 			});
