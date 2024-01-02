@@ -2,7 +2,7 @@ import * as esbuild from 'esbuild';
 import { importAsGlobals } from '../esbuild-plugin/ImportAsGlobals'
 
 const result = await esbuild.build({
-  entryPoints: ['src/index.ts'],
+  entryPoints: ['src/vite-system-ts.ts'],
   bundle: true,
   // outdir: 'dist',
   outfile: './dist/vite-system-ts.js',

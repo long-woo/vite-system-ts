@@ -2,14 +2,16 @@ import type { Plugin } from "vite";
 
 export interface ViteSystemTSOption {
 	/**
-	 * 客户端处理热更新的入口文件，默认是 main.ts/main.js。
-	 * 如果是微前端（Single-SPA），请使用主应用的入口文件。
+	 * 
+	 * 适用于微前端（Single-SPA），基座应用的入口文件路径。
+	 * 
+	 * @default main/src/main.js
 	 */
 	hotEnter?: string;
 }
 
 export const ViteSystemTS = (option: ViteSystemTSOption): Plugin => {
-	const _hotEnter = option.hotEnter ?? "main";
+	const _hotEnter = option.hotEnter ?? "main/src/main.js";
 
 	return {
 		name: "vite-system-ts",
@@ -33,21 +35,15 @@ export const ViteSystemTS = (option: ViteSystemTSOption): Plugin => {
 			return [];
 		},
 		transform(code, id) {
-			if (
-				(_hotEnter === "main" && !/main.(j|t)s$/.test(_hotEnter)) ||
-				!id.includes(_hotEnter)
-			)
-				return code;
+			if (id.includes(_hotEnter)) {
+				return `${code}
 
-			return {
-				code: `${code}
-				
-				if (import.meta.hot) {
-					import.meta.hot.on('vps:hot-file-update', (data) => {
-						window.__VPS_HMR.emit(data)
-					})
-				}`,
-			};
+if (import.meta.hot) {
+	import.meta.hot.on('vps:hot-file-update', (data) => {
+		window.__VPS_HMR.emit(data);
+	});
+}`;
+			}
 		},
 	};
 };

@@ -1,9 +1,11 @@
 {
-  "name": "vite-system-ts",
-  "module": "src/index.ts",
+  "name": "@loongwoo/vite-plugin-system-ts",
+  "version": "1.0.0",
+  "description": "Vite System HRM 插件",
+  "module": "src/vite-plugin-system-ts.ts",
   "type": "module",
   "scripts": {
-    "build": "bun build ./src/index.ts --outfile ./dist/vite-system-ts.js --target browser --format esm --minify --external '*'",
+    "build": "bun build ./src/vite-system-ts.ts --outfile ./dist/vite-system-ts.js --target browser --format esm --minify --external '*'",
     "build:esbuild": "bun ./scripts/build.js",
     "format": "bunx @biomejs/biome format --write ./src",
     "lint": "bunx @biomejs/biome lint ./src",
